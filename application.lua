@@ -77,19 +77,33 @@ NOT INSIDE OF PLAYER DATA
 ]]
 function Commerce.PlayerAdded(Player : Player)
 	Commerce.HandlePendingPurchases(Player)
-	local OwnedGamepasses = Shared.Data:Get(Player, "Gamepasses")
-	local Temp = {}
+	local Success, Purchases = Commerce.SafeGet(Player.UserId);
+	if Success and type(Purchases) == "table" then
+		local NewPurchases = table.clone(Purchases);
 
-	for _, Id in OwnedGamepasses do
-		Temp[Id] = true
+		for Index, Id in Purchases do
+			local Success = Commerce.GrantProduct(Player, Id);
+			if Success then
+				NewPurchases[Index] = nil;
+			end
+		end
+		if next(NewPurchases) ~= nil then
+			Commerce.SafeSet(Player.UserId, NewPurchases)
+		else
+			Commerce.SafeSet(Player.UserId, nil)
+		end
 	end
-
-	for Id, _ in Commerce.Gamepasses do
-		if Temp[Id] then continue end
-		local Bool = Commerce.OwnsGamepass(Player, Id)
-		if Bool == false then continue end
-
-		task.spawn(Commerce.PromptGamePassPurchaseFinished, Player, Id, true)
+	local OwnedGamepasses = Shared.Data:Get(Player, "Gamepasses");
+	local Temp = {};
+	for _, Id in OwnedGamepasses do
+		Temp[Id] = true;
+	end
+	for Id, Name in Commerce.Gamepasses do
+		if Temp[Id] then continue; end
+		local Bool = Commerce.OwnsGamepass(Player, Id);
+		--print(Success, Bool, Name, Id)
+		if Bool == false then continue; end	
+		task.spawn(Commerce.PromptGamePassPurchaseFinished, Player, Id, true);
 	end
 end
 --[[
